@@ -1,0 +1,67 @@
+-- HC19.hs
+-- Exercices Chapitre 19 : Applicative et Effets
+
+module HC19 where
+
+import Control.Applicative
+import Control.Monad (forever, when)
+
+-- HC19T1: Define an Applicative instance for a custom data type Pair a.
+data Pair a = Pair a a deriving (Show)
+
+instance Functor Pair where
+  fmap f (Pair x y) = Pair (f x) (f y)
+
+instance Applicative Pair where
+  pure x = Pair x x
+  (Pair f g) <*> (Pair x y) = Pair (f x) (g y)
+
+-- HC19T2: Implement addThreeApplicative that adds three Maybe Int values
+addThreeApplicative :: Maybe Int -> Maybe Int -> Maybe Int -> Maybe Int
+addThreeApplicative x y z = pure (\a b c -> a + b + c) <*> x <*> y <*> z
+
+-- HC19T3: safeProduct multiplies a list of Maybe Int
+safeProduct :: [Maybe Int] -> Maybe Int
+safeProduct = fmap product . sequenceA
+
+-- HC19T4: liftAndMultiply using liftA2
+liftAndMultiply :: Maybe Int -> Maybe Int -> Maybe Int
+liftAndMultiply = liftA2 (*)
+
+-- HC19T5: applyEffects with (IO Int, IO Int)
+applyEffects :: (IO Int, IO Int) -> IO Int
+applyEffects (io1, io2) = (+) <$> io1 <*> io2
+
+-- HC19T6: repeatEffect using forever
+repeatEffect :: IO () -> IO ()
+repeatEffect action = forever action
+
+-- HC19T7: conditionalPrint using when
+conditionalPrint :: Bool -> String -> IO ()
+conditionalPrint cond msg = when cond (putStrLn msg)
+
+-- HC19T8: discardSecond using <*
+discardSecond :: Applicative f => f a -> f b -> f a
+discardSecond = (<*)
+
+-- HC19T9: pureAndApply demonstration
+pureAndApply :: Maybe Int
+pureAndApply = pure (+3) <*> Just 4
+
+-- HC19T10: combineResults with Either applicative
+combineResults :: Either String Int -> Either String Int -> Either String Int
+combineResults = liftA2 (+)
+
+-- Petit main pour tester
+main :: IO ()
+main = do
+  print $ addThreeApplicative (Just 1) (Just 2) (Just 3)   -- Just 6
+  print $ safeProduct [Just 2, Just 3, Just 4]             -- Just 24
+  print $ safeProduct [Just 2, Nothing, Just 4]            -- Nothing
+  print $ liftAndMultiply (Just 3) (Just 5)                -- Just 15
+  res <- applyEffects (print 5 >> return 5, print 7 >> return 7)
+  print res
+  conditionalPrint True "Hello, condition met!"            -- prints message
+  print pureAndApply                                       -- Just 7
+  print $ combineResults (Right 5) (Right 10)              -- Right 15
+  print $ combineResults (Left "Error1") (Right 10)        -- Left "Error1"
